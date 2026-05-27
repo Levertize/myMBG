@@ -24,6 +24,9 @@ export function useAvatar(containerRef) {
   const currentEmotionIntensityRef = useRef(0)
   const poseOverridesRef = useRef({})
   const poseCurrentRef = useRef({})
+  const mouseRef = useRef({ x: 0, y: 0 })
+  const targetHeadYawRef = useRef(0)
+  const targetHeadPitchRef = useRef(0)
 
   useEffect(() => {
     const container = containerRef.current
@@ -75,10 +78,10 @@ export function useAvatar(containerRef) {
         vrmRef.current = vrm
 
         // Set rest pose once — arms down
-        setBone(vrm, 'rightUpperArm', 0, 0, 1.15)
-        setBone(vrm, 'leftUpperArm', 0, 0, -1.15)
-        setBone(vrm, 'rightLowerArm', 0, 0, -0.08)
-        setBone(vrm, 'leftLowerArm', 0, 0, 0.08)
+        setBone(vrm, 'rightUpperArm', 0, 0, 1.22)
+        setBone(vrm, 'leftUpperArm', 0, 0, -1.22)
+        setBone(vrm, 'rightLowerArm', 0, 0, -0.06)
+        setBone(vrm, 'leftLowerArm', 0, 0, 0.06)
 
         useWaifuStore.getState().setVrmLoaded(true)
         console.log('✅ VRM loaded')
@@ -86,6 +89,13 @@ export function useAvatar(containerRef) {
       undefined,
       (err) => console.error('VRM error:', err)
     )
+
+    // Mouse tracking listener
+    const handleMouseMove = (e) => {
+      mouseRef.current.x = (e.clientX / window.innerWidth) * 2 - 1
+      mouseRef.current.y = -(e.clientY / window.innerHeight) * 2 + 1
+    }
+    window.addEventListener('mousemove', handleMouseMove)
 
     // Animation loop
     function animate() {
@@ -97,31 +107,54 @@ export function useAvatar(containerRef) {
       if (vrm) {
         const t = timeRef.current
 
-        // === IDLE: Set ABSOLUTE rotations (rest + tiny oscillation) ===
+        // === INTERACTIVE: Mouse tracking calculations ===
+        // Smoothly lerp towards target mouse coordinates (limits gaze range)
+        targetHeadYawRef.current = THREE.MathUtils.lerp(targetHeadYawRef.current, mouseRef.current.x * 0.28, delta * 3.5)
+        targetHeadPitchRef.current = THREE.MathUtils.lerp(targetHeadPitchRef.current, mouseRef.current.y * 0.18, delta * 3.5)
+
+        // === IDLE: Set ABSOLUTE rotations (rest + breathing + mouse tracking) ===
         // Spine breathing
         setBone(vrm, 'spine', Math.sin(t * 1.2) * 0.008, 0, 0)
 
-        // Chest subtle sway
-        setBone(vrm, 'chest', Math.sin(t * 0.9) * 0.004, 0, Math.sin(t * 0.6) * 0.006)
+        // Chest subtle breathing sway
+        setBone(vrm, 'chest', Math.sin(t * 1.2) * 0.004, 0, Math.sin(t * 0.6) * 0.005)
 
-        // Head gentle movement
-        setBone(vrm, 'head', Math.sin(t * 0.5) * 0.008, Math.sin(t * 0.35) * 0.025, Math.sin(t * 0.7) * 0.012)
+        // Neck (follows head with a slight delay)
+        setBone(vrm, 'neck', targetHeadPitchRef.current * 0.25, targetHeadYawRef.current * 0.25, 0)
 
-        // Arms — rest pose + gentle sway (absolute, NOT additive)
+        // Head gentle movement + mouse tracking
+        setBone(vrm, 'head',
+          targetHeadPitchRef.current * 0.75 + Math.sin(t * 0.5) * 0.006,
+          targetHeadYawRef.current * 0.75 + Math.sin(t * 0.35) * 0.015,
+          Math.sin(t * 0.7) * 0.008
+        )
+
+        // Arms — rest pose + natural sway
         setBone(vrm, 'rightUpperArm',
-          Math.sin(t * 0.5) * 0.015,
+          Math.sin(t * 0.5) * 0.012,
           0,
-          1.15 + Math.sin(t * 0.8) * 0.02
+          1.22 + Math.sin(t * 0.8) * 0.015
         )
         setBone(vrm, 'leftUpperArm',
-          Math.sin(t * 0.5 + 0.5) * 0.015,
+          Math.sin(t * 0.5 + 0.5) * 0.012,
           0,
-          -1.15 + Math.sin(t * 0.8 + 0.5) * 0.02
+          -1.22 + Math.sin(t * 0.8 + 0.5) * 0.015
         )
 
-        // Forearms stay at rest
-        setBone(vrm, 'rightLowerArm', 0, 0, -0.08)
-        setBone(vrm, 'leftLowerArm', 0, 0, 0.08)
+        // Forearms stay at rest + breathing oscillation
+        setBone(vrm, 'rightLowerArm', 0, 0, -0.06 + Math.sin(t * 0.9) * 0.005)
+        setBone(vrm, 'leftLowerArm', 0, 0, 0.06 + Math.sin(t * 0.9 + 0.5) * 0.005)
+
+        // Fingers - soft natural curl breathing animation
+        const curl = 0.15 + Math.sin(t * 0.8) * 0.03
+        setBone(vrm, 'rightIndexProximal', curl, 0, 0)
+        setBone(vrm, 'rightMiddleProximal', curl * 1.1, 0, 0)
+        setBone(vrm, 'rightRingProximal', curl * 1.1, 0, 0)
+        setBone(vrm, 'rightLittleProximal', curl * 0.9, 0, 0)
+        setBone(vrm, 'leftIndexProximal', curl, 0, 0)
+        setBone(vrm, 'leftMiddleProximal', curl * 1.1, 0, 0)
+        setBone(vrm, 'leftRingProximal', curl * 1.1, 0, 0)
+        setBone(vrm, 'leftLittleProximal', curl * 0.9, 0, 0)
 
         // === Pose overrides (smooth lerp) ===
         Object.entries(poseOverridesRef.current).forEach(([boneName, target]) => {
@@ -167,6 +200,7 @@ export function useAvatar(containerRef) {
 
     return () => {
       window.removeEventListener('resize', onResize)
+      window.removeEventListener('mousemove', handleMouseMove)
       if (frameIdRef.current) cancelAnimationFrame(frameIdRef.current)
       if (vrmRef.current) {
         scene.remove(vrmRef.current.scene)
