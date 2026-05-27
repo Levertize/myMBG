@@ -4,13 +4,13 @@ export default {
   theme: {
     extend: {
       colors: {
-        base: '#0f1117',
-        elevated: '#1a1e2e',
-        surface: '#222839',
-        'accent-indigo': '#818cf8',
-        'accent-purple': '#a78bfa',
-        'accent-cyan': '#67e8f9',
-        'accent-pink': '#f0abfc',
+        base: 'var(--bg-base)',
+        elevated: 'var(--bg-elevated)',
+        surface: 'var(--bg-surface)',
+        'accent-indigo': 'var(--accent-indigo)',
+        'accent-purple': 'var(--accent-purple)',
+        'accent-cyan': 'var(--accent-cyan)',
+        'accent-pink': 'var(--accent-pink)',
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],

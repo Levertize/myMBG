@@ -6,6 +6,7 @@ import AvatarCanvas from './components/AvatarCanvas'
 import ChatBox from './components/ChatBox'
 import VoiceButton from './components/VoiceButton'
 import StatusBar from './components/StatusBar'
+import Sidebar from './components/Sidebar'
 
 function App() {
   return (
@@ -17,6 +18,7 @@ function App() {
       <AvatarCanvas />
 
       {/* UI Layer */}
+      <Sidebar />
       <StatusBar />
       <ChatBox />
       <VoiceButton />

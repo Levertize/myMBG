@@ -1,5 +1,5 @@
 /**
- * VoiceButton — Polished, colorful
+ * VoiceButton — Mockup-aligned minimalist microphone controller
  */
 
 import { useState, useCallback, useEffect, memo } from 'react'
@@ -43,48 +43,35 @@ function VoiceButton() {
   const isBusy = status === 'thinking' || status === 'talking'
 
   return (
-    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 flex flex-col items-center gap-3" id="voice-section">
-      {/* Transcript preview */}
+    <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-40 flex flex-col items-center gap-4" id="voice-section">
+      {/* Transcript preview overlay */}
       {transcript && isListening && (
-        <div className="bg-elevated border border-[rgba(148,163,184,0.08)] rounded-xl px-4 py-2 max-w-[260px] anim-fade-in">
-          <p className="text-[12px] text-[#94a3b8] font-light truncate">"{transcript}"</p>
+        <div className="bg-zinc-950/60 border border-white/5 backdrop-blur-xl rounded-xl px-4 py-2 max-w-[260px] anim-fade-in shadow-xl">
+          <p className="text-[12px] text-zinc-300 font-sans font-light truncate">"{transcript}"</p>
         </div>
       )}
 
-      {/* Button */}
+      {/* Circle Microphone Button */}
       <button
         onMouseDown={isSupported ? handleDown : undefined}
         onMouseUp={isSupported ? handleUp : undefined}
         onMouseLeave={isHolding ? handleUp : undefined}
         onTouchStart={isSupported ? handleDown : undefined}
         onTouchEnd={isSupported ? handleUp : undefined}
-        disabled={isBusy}
-        className={`voice-btn ${isListening ? 'voice-btn--active' : ''}`}
+        disabled={isBusy || !isSupported}
+        className={`w-[60px] h-[60px] rounded-full border flex items-center justify-center backdrop-blur-md transition-all duration-300 ${
+          isListening
+            ? 'bg-zinc-100 border-zinc-100 text-zinc-950 shadow-[0_0_25px_0_rgba(255,255,255,0.25)] scale-105'
+            : 'bg-zinc-950/20 border-white/10 text-zinc-400 hover:text-zinc-100 hover:border-white/20 hover:bg-zinc-900/30'
+        } disabled:opacity-20 disabled:cursor-not-allowed`}
         id="voice-btn"
       >
-        {isListening ? (
-          <div className="flex gap-[3px] items-center h-5">
-            {[0, 1, 2, 3].map((i) => (
-              <div
-                key={i}
-                className="w-[3px] rounded-full bg-accent-indigo"
-                style={{ animation: `bar-wave 0.7s ${i * 0.12}s ease-in-out infinite` }}
-              />
-            ))}
-          </div>
-        ) : (
-          <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-            <rect x="9" y="2" width="6" height="12" rx="3" />
-            <path d="M5 10a7 7 0 0014 0" />
-            <line x1="12" y1="17" x2="12" y2="22" />
-          </svg>
-        )}
+        <svg className="w-[22px] h-[22px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="9" y="2" width="6" height="12" rx="3" />
+          <path d="M5 10a7 7 0 0014 0" />
+          <line x1="12" y1="17" x2="12" y2="22" />
+        </svg>
       </button>
-
-      {/* Label */}
-      <span className="text-[10px] text-[#64748b] font-medium tracking-widest uppercase">
-        {!isSupported ? 'Unavailable' : isListening ? 'Listening...' : isBusy ? '' : 'Hold to talk'}
-      </span>
     </div>
   )
 }

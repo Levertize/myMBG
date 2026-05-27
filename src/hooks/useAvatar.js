@@ -47,15 +47,15 @@ export function useAvatar(containerRef) {
     container.appendChild(renderer.domElement)
     rendererRef.current = renderer
 
-    // Lighting
-    scene.add(new THREE.AmbientLight(0xffffff, 0.6))
-    const key = new THREE.DirectionalLight(0xffffff, 0.7)
+    // Lighting - Minimalist studio setup
+    scene.add(new THREE.AmbientLight(0xffffff, 0.55))
+    const key = new THREE.DirectionalLight(0xffffff, 0.75)
     key.position.set(1, 2, 3)
     scene.add(key)
-    const fill = new THREE.DirectionalLight(0xe8ecf0, 0.25)
+    const fill = new THREE.DirectionalLight(0xffffff, 0.3)
     fill.position.set(-2, 1, 1)
     scene.add(fill)
-    const back = new THREE.DirectionalLight(0xd0d8e0, 0.15)
+    const back = new THREE.DirectionalLight(0xffffff, 0.2)
     back.position.set(0, 1, -2)
     scene.add(back)
 
