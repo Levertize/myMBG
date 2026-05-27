@@ -408,25 +408,23 @@ export function useAvatar(containerRef) {
     }
   }, [])
 
-  // Subscribe to store changes
+  // Subscribe to store changes (Zustand v5 API: full state listener)
   useEffect(() => {
-    const unsubEmotion = useWaifuStore.subscribe(
-      (state) => state.currentEmotion,
-      (emotion) => applyEmotion(emotion),
-      { fireImmediately: false }
-    )
+    let prevEmotion = useWaifuStore.getState().currentEmotion
+    let prevPose = useWaifuStore.getState().currentPose
 
-    const unsubPose = useWaifuStore.subscribe(
-      (state) => state.currentPose,
-      (pose) => applyPose(pose),
-      { fireImmediately: false }
-    )
+    const unsub = useWaifuStore.subscribe((state) => {
+      if (state.currentEmotion !== prevEmotion) {
+        prevEmotion = state.currentEmotion
+        applyEmotion(state.currentEmotion)
+      }
+      if (state.currentPose !== prevPose) {
+        prevPose = state.currentPose
+        applyPose(state.currentPose)
+      }
+    })
 
-    return () => {
-      // Zustand subscribe returns unsubscribe function
-      if (typeof unsubEmotion === 'function') unsubEmotion()
-      if (typeof unsubPose === 'function') unsubPose()
-    }
+    return () => unsub()
   }, [applyEmotion, applyPose])
 
   return { vrmRef }
