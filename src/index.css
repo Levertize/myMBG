@@ -5,27 +5,39 @@
 @tailwind utilities;
 
 /* ============================
-   Minimal Design System
+   Design Tokens
    ============================ */
 :root {
-  --bg: #09090b;
-  --surface: rgba(255, 255, 255, 0.025);
-  --surface-hover: rgba(255, 255, 255, 0.04);
-  --border: rgba(255, 255, 255, 0.06);
-  --border-hover: rgba(255, 255, 255, 0.1);
-  --text: rgba(255, 255, 255, 0.87);
-  --text-secondary: rgba(255, 255, 255, 0.45);
-  --text-muted: rgba(255, 255, 255, 0.2);
-  --accent: #67e8f9;
-  --accent-dim: rgba(103, 232, 249, 0.12);
+  --bg-base: #0f1117;
+  --bg-elevated: #1a1e2e;
+  --bg-surface: #222839;
+  --bg-input: #1c2033;
+
+  --accent-indigo: #818cf8;
+  --accent-purple: #a78bfa;
+  --accent-cyan: #67e8f9;
+  --accent-pink: #f0abfc;
+
+  --user-bubble: rgba(99, 102, 241, 0.18);
+  --user-bubble-border: rgba(99, 102, 241, 0.12);
+  --ai-bubble: rgba(139, 92, 246, 0.08);
+
+  --text-main: #e2e8f0;
+  --text-soft: #94a3b8;
+  --text-dim: #64748b;
+  --text-faint: #475569;
+
+  --border-subtle: rgba(148, 163, 184, 0.08);
+  --border-medium: rgba(148, 163, 184, 0.12);
+  --border-focus: rgba(129, 140, 248, 0.4);
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 body {
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  background: var(--bg);
-  color: var(--text);
+  background: var(--bg-base);
+  color: var(--text-main);
   overflow: hidden;
   width: 100vw;
   height: 100vh;
@@ -35,39 +47,253 @@ body {
 #root { width: 100%; height: 100%; }
 
 /* ============================
+   Background — subtle gradient
+   ============================ */
+.app-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background:
+    radial-gradient(ellipse 80% 70% at 70% 90%, rgba(99, 102, 241, 0.04) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 50% at 20% 20%, rgba(139, 92, 246, 0.03) 0%, transparent 60%),
+    var(--bg-base);
+}
+
+/* ============================
    Brand Title Glow — THE star
    ============================ */
 .brand-glow {
   font-family: 'Outfit', sans-serif;
   font-weight: 700;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.12em;
   color: #fff;
   text-shadow:
-    0 0 8px rgba(103, 232, 249, 0.7),
-    0 0 24px rgba(103, 232, 249, 0.35),
-    0 0 48px rgba(103, 232, 249, 0.15),
-    0 0 96px rgba(103, 232, 249, 0.06);
-  animation: title-breathe 4s ease-in-out infinite;
+    0 0 8px rgba(103, 232, 249, 0.75),
+    0 0 20px rgba(103, 232, 249, 0.4),
+    0 0 40px rgba(103, 232, 249, 0.18),
+    0 0 80px rgba(103, 232, 249, 0.06);
+  animation: glow-breathe 4s ease-in-out infinite;
 }
 
-@keyframes title-breathe {
+@keyframes glow-breathe {
   0%, 100% {
     text-shadow:
-      0 0 8px rgba(103, 232, 249, 0.7),
-      0 0 24px rgba(103, 232, 249, 0.35),
-      0 0 48px rgba(103, 232, 249, 0.15);
+      0 0 8px rgba(103, 232, 249, 0.75),
+      0 0 20px rgba(103, 232, 249, 0.4),
+      0 0 40px rgba(103, 232, 249, 0.18);
   }
   50% {
     text-shadow:
-      0 0 12px rgba(103, 232, 249, 0.9),
-      0 0 32px rgba(103, 232, 249, 0.45),
-      0 0 64px rgba(103, 232, 249, 0.2),
-      0 0 100px rgba(103, 232, 249, 0.08);
+      0 0 10px rgba(103, 232, 249, 0.9),
+      0 0 28px rgba(103, 232, 249, 0.5),
+      0 0 56px rgba(103, 232, 249, 0.22),
+      0 0 90px rgba(103, 232, 249, 0.08);
   }
 }
 
 /* ============================
-   Simple Animations
+   Chat Panel
+   ============================ */
+.chat-panel {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: 20px;
+  overflow: hidden;
+}
+
+.chat-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.chat-header-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.chat-header-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent-indigo);
+  opacity: 0.7;
+}
+
+/* ============================
+   Message Bubbles
+   ============================ */
+.msg-user {
+  background: var(--user-bubble);
+  border: 1px solid var(--user-bubble-border);
+  border-radius: 18px 18px 6px 18px;
+  padding: 10px 16px;
+  max-width: 82%;
+  color: var(--text-main);
+}
+
+.msg-ai {
+  background: var(--ai-bubble);
+  border-radius: 18px 18px 18px 6px;
+  padding: 10px 16px;
+  max-width: 82%;
+  color: var(--text-soft);
+  position: relative;
+}
+
+.msg-ai::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 10px;
+  bottom: 10px;
+  width: 2px;
+  border-radius: 1px;
+  background: linear-gradient(180deg, var(--accent-purple), var(--accent-pink));
+  opacity: 0.4;
+}
+
+/* ============================
+   Input Area
+   ============================ */
+.chat-input-area {
+  padding: 12px 16px 16px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.chat-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-subtle);
+  border-radius: 14px;
+  padding: 4px 4px 4px 16px;
+  transition: border-color 0.2s ease;
+}
+
+.chat-input-wrap:focus-within {
+  border-color: var(--border-focus);
+}
+
+.chat-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text-main);
+  font-size: 13px;
+  font-family: 'Inter', sans-serif;
+  padding: 8px 0;
+  font-weight: 400;
+}
+
+.chat-input::placeholder {
+  color: var(--text-faint);
+}
+
+.chat-input:disabled {
+  opacity: 0.35;
+}
+
+.send-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: none;
+  background: linear-gradient(135deg, var(--accent-indigo), var(--accent-purple));
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.send-btn:hover {
+  opacity: 0.85;
+  transform: scale(1.04);
+}
+
+.send-btn:active {
+  transform: scale(0.95);
+}
+
+.send-btn:disabled {
+  opacity: 0.2;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ============================
+   Voice Button
+   ============================ */
+.voice-btn {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: none;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-medium);
+  color: var(--text-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.voice-btn:hover {
+  background: var(--bg-elevated);
+  border-color: rgba(129, 140, 248, 0.25);
+  color: var(--accent-indigo);
+}
+
+.voice-btn--active {
+  background: linear-gradient(135deg, rgba(129, 140, 248, 0.15), rgba(167, 139, 250, 0.12));
+  border-color: rgba(129, 140, 248, 0.35);
+  color: var(--accent-indigo);
+}
+
+.voice-btn:disabled {
+  opacity: 0.2;
+  cursor: not-allowed;
+}
+
+/* ============================
+   Status Badge
+   ============================ */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 20px;
+  background: rgba(99, 102, 241, 0.08);
+  border: 1px solid rgba(99, 102, 241, 0.1);
+}
+
+.status-badge--listening {
+  background: rgba(244, 114, 182, 0.08);
+  border-color: rgba(244, 114, 182, 0.12);
+}
+
+.status-badge--thinking {
+  background: rgba(167, 139, 250, 0.08);
+  border-color: rgba(167, 139, 250, 0.12);
+}
+
+.status-badge--talking {
+  background: rgba(103, 232, 249, 0.08);
+  border-color: rgba(103, 232, 249, 0.12);
+}
+
+/* ============================
+   Animations
    ============================ */
 @keyframes fade-in {
   from { opacity: 0; }
@@ -79,32 +305,74 @@ body {
   to { opacity: 1; transform: translateY(0); }
 }
 
-@keyframes slide-in {
-  from { opacity: 0; transform: translateX(16px); }
+@keyframes slide-in-right {
+  from { opacity: 0; transform: translateX(20px); }
   to { opacity: 1; transform: translateX(0); }
 }
 
 @keyframes thinking-dot {
-  0%, 80%, 100% { opacity: 0.15; }
-  40% { opacity: 0.6; }
+  0%, 80%, 100% { opacity: 0.2; transform: scale(0.85); }
+  40% { opacity: 0.8; transform: scale(1); }
 }
 
-@keyframes pulse-soft {
+@keyframes bar-wave {
+  0%, 100% { height: 4px; }
+  50% { height: 16px; }
+}
+
+@keyframes pulse-dot {
   0%, 100% { opacity: 0.5; }
   50% { opacity: 1; }
 }
 
-/* ============================
-   Scrollbar — invisible
-   ============================ */
-::-webkit-scrollbar { width: 3px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.06); border-radius: 10px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.12); }
+.anim-fade-in { animation: fade-in 0.35s ease-out forwards; }
+.anim-fade-in-up { animation: fade-in-up 0.35s ease-out forwards; }
+.anim-slide-in { animation: slide-in-right 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
 
 /* ============================
-   Utilities
+   Scrollbar
    ============================ */
-.anim-fade-in { animation: fade-in 0.4s ease-out forwards; }
-.anim-fade-in-up { animation: fade-in-up 0.4s ease-out forwards; }
-.anim-slide-in { animation: slide-in 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(129, 140, 248, 0.12); border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(129, 140, 248, 0.25); }
+
+/* ============================
+   Close Button
+   ============================ */
+.close-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  border: none;
+  background: rgba(148, 163, 184, 0.06);
+  color: var(--text-dim);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-size: 13px;
+}
+
+.close-btn:hover {
+  background: rgba(148, 163, 184, 0.12);
+  color: var(--text-soft);
+}
+
+/* ============================
+   Loading placeholder
+   ============================ */
+.loading-shimmer {
+  background: linear-gradient(135deg, var(--accent-indigo), var(--accent-purple), var(--accent-pink));
+  background-size: 300% 300%;
+  animation: shimmer-shift 4s ease-in-out infinite;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+@keyframes shimmer-shift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
