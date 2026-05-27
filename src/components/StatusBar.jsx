@@ -1,8 +1,7 @@
 /**
- * StatusBar Component
+ * StatusBar — Minimal
  *
- * Top bar showing MyMBG branding and current status
- * with animated glow indicators.
+ * Glowing "MyMBG" title + subtle status indicator
  */
 
 import { memo } from 'react'
@@ -17,46 +16,34 @@ const STATUS_LABELS = {
 
 function StatusBar() {
   const status = useWaifuStore((s) => s.status)
-  const isVrmLoaded = useWaifuStore((s) => s.isVrmLoaded)
   const chatVisible = useWaifuStore((s) => s.chatVisible)
 
   return (
     <div className="fixed top-0 left-0 right-0 z-50 pointer-events-none" id="status-bar">
-      <div className="flex items-center justify-between px-5 py-3">
-        {/* Brand */}
+      <div className="flex items-center justify-between px-6 py-4">
+        {/* Brand — the ONLY glow in the app */}
         <div className="flex items-center gap-3 pointer-events-auto">
-          <h1 className="brand-title text-xl">MyMBG</h1>
-          <div className="flex items-center gap-2 ml-2">
-            <div className={`status-dot status-dot--${status}`} />
-            <span className="text-[11px] text-white/35 font-light tracking-wider uppercase">
-              {STATUS_LABELS[status] || 'Offline'}
+          <h1 className="brand-glow text-xl select-none">MyMBG</h1>
+          <div className="flex items-center gap-2">
+            <div className="w-1.5 h-1.5 rounded-full bg-white/20" style={{ animation: status !== 'idle' ? 'pulse-soft 1s ease-in-out infinite' : 'none' }} />
+            <span className="text-[11px] text-white/20 font-light tracking-widest uppercase">
+              {STATUS_LABELS[status]}
             </span>
           </div>
         </div>
 
-        {/* Right side controls */}
-        <div className="flex items-center gap-2 pointer-events-auto">
-          {/* VRM status */}
-          {!isVrmLoaded && (
-            <span className="text-[10px] text-glow-cyan/30 font-light animate-pulse">
-              VRM loading...
-            </span>
-          )}
-
-          {/* Chat toggle */}
-          {!chatVisible && (
-            <button
-              onClick={() => useWaifuStore.getState().toggleChat()}
-              className="toggle-btn rounded-lg px-3 py-1.5 text-white/40 hover:text-white/70 text-xs flex items-center gap-1.5"
-              id="chat-toggle-btn"
-            >
-              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
-              </svg>
-              Chat
-            </button>
-          )}
-        </div>
+        {/* Chat toggle (only when chat is hidden) */}
+        {!chatVisible && (
+          <button
+            onClick={() => useWaifuStore.getState().toggleChat()}
+            className="pointer-events-auto text-white/20 hover:text-white/40 transition-colors duration-200"
+            id="chat-toggle-btn"
+          >
+            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
+            </svg>
+          </button>
+        )}
       </div>
     </div>
   )
