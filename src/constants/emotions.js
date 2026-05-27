@@ -11,28 +11,28 @@
 export const EMOTION_MAP = {
   happy: {
     preset: 'happy',         // VRM v1/v2
-    fallback: 'joy',         // VRM v0
+    fallback: 'Joy',         // VRM v0
     intensity: 1.0,
   },
   sad: {
     preset: 'sad',
-    fallback: 'sorrow',
+    fallback: 'Sorrow',
     intensity: 1.0,
   },
   surprised: {
     preset: 'surprised',
-    fallback: 'surprised',
+    fallback: 'Surprised',
     intensity: 1.0,
   },
   angry: {
     preset: 'angry',
-    fallback: 'angry',
+    fallback: 'Angry',
     intensity: 0.8,
   },
   shy: {
     preset: 'happy',
-    fallback: 'joy',
-    intensity: 0.4,
+    fallback: 'Joy',
+    intensity: 0.5,
   },
   thinking: {
     preset: null,

@@ -109,44 +109,44 @@ export function useAvatar(containerRef) {
 
         // === INTERACTIVE: Mouse tracking calculations ===
         // Smoothly lerp towards target mouse coordinates (limits gaze range)
-        targetHeadYawRef.current = THREE.MathUtils.lerp(targetHeadYawRef.current, mouseRef.current.x * 0.28, delta * 3.5)
-        targetHeadPitchRef.current = THREE.MathUtils.lerp(targetHeadPitchRef.current, mouseRef.current.y * 0.18, delta * 3.5)
+        targetHeadYawRef.current = THREE.MathUtils.lerp(targetHeadYawRef.current, mouseRef.current.x * 0.32, delta * 3.5)
+        targetHeadPitchRef.current = THREE.MathUtils.lerp(targetHeadPitchRef.current, mouseRef.current.y * 0.2, delta * 3.5)
 
         // === IDLE: Set ABSOLUTE rotations (rest + breathing + mouse tracking) ===
-        // Spine breathing
-        setBone(vrm, 'spine', Math.sin(t * 1.2) * 0.008, 0, 0)
+        // Hips/Spine lateral sway and rotation (breathing + weight shift)
+        const swayX = Math.sin(t * 1.0) * 0.02 // pitch sway
+        const swayY = Math.sin(t * 0.5) * 0.03 // yaw rotation sway
+        const swayZ = Math.cos(t * 0.5) * 0.025 // roll side-tilt sway
+        setBone(vrm, 'spine', swayX, swayY, swayZ)
 
-        // Chest subtle breathing sway
-        setBone(vrm, 'chest', Math.sin(t * 1.2) * 0.004, 0, Math.sin(t * 0.6) * 0.005)
+        // Chest breathing sway
+        setBone(vrm, 'chest', Math.sin(t * 1.0) * 0.008, 0, Math.sin(t * 0.5) * 0.008)
 
         // Neck (follows head with a slight delay)
         setBone(vrm, 'neck', targetHeadPitchRef.current * 0.25, targetHeadYawRef.current * 0.25, 0)
 
         // Head gentle movement + mouse tracking
         setBone(vrm, 'head',
-          targetHeadPitchRef.current * 0.75 + Math.sin(t * 0.5) * 0.006,
-          targetHeadYawRef.current * 0.75 + Math.sin(t * 0.35) * 0.015,
-          Math.sin(t * 0.7) * 0.008
+          targetHeadPitchRef.current * 0.75 + Math.sin(t * 0.8) * 0.015,
+          targetHeadYawRef.current * 0.75 + Math.sin(t * 0.4) * 0.03,
+          Math.sin(t * 0.4) * 0.025 // head tilt roll
         )
 
-        // Arms — rest pose + natural sway
-        setBone(vrm, 'rightUpperArm',
-          Math.sin(t * 0.5) * 0.012,
-          0,
-          1.22 + Math.sin(t * 0.8) * 0.015
-        )
-        setBone(vrm, 'leftUpperArm',
-          Math.sin(t * 0.5 + 0.5) * 0.012,
-          0,
-          -1.22 + Math.sin(t * 0.8 + 0.5) * 0.015
-        )
+        // Arms — sway in counter-balance to the spine sway
+        const armSwayR_X = Math.sin(t * 0.5) * 0.04
+        const armSwayR_Z = 1.22 + Math.sin(t * 1.0) * 0.03
+        setBone(vrm, 'rightUpperArm', armSwayR_X, 0, armSwayR_Z)
 
-        // Forearms stay at rest + breathing oscillation
-        setBone(vrm, 'rightLowerArm', 0, 0, -0.06 + Math.sin(t * 0.9) * 0.005)
-        setBone(vrm, 'leftLowerArm', 0, 0, 0.06 + Math.sin(t * 0.9 + 0.5) * 0.005)
+        const armSwayL_X = -Math.sin(t * 0.5) * 0.04
+        const armSwayL_Z = -1.22 + Math.sin(t * 1.0 + 0.5) * 0.03
+        setBone(vrm, 'leftUpperArm', armSwayL_X, 0, armSwayL_Z)
+
+        // Forearms stay at rest + slight breathing oscillation
+        setBone(vrm, 'rightLowerArm', 0, 0, -0.08 + Math.sin(t * 0.8) * 0.015)
+        setBone(vrm, 'leftLowerArm', 0, 0, 0.08 + Math.sin(t * 0.8 + 0.5) * 0.015)
 
         // Fingers - soft natural curl breathing animation
-        const curl = 0.15 + Math.sin(t * 0.8) * 0.03
+        const curl = 0.2 + Math.sin(t * 1.0) * 0.08
         setBone(vrm, 'rightIndexProximal', curl, 0, 0)
         setBone(vrm, 'rightMiddleProximal', curl * 1.1, 0, 0)
         setBone(vrm, 'rightRingProximal', curl * 1.1, 0, 0)
@@ -157,6 +157,7 @@ export function useAvatar(containerRef) {
         setBone(vrm, 'leftLittleProximal', curl * 0.9, 0, 0)
 
         // === Pose overrides (smooth lerp) ===
+        const currentPose = useWaifuStore.getState().currentPose
         Object.entries(poseOverridesRef.current).forEach(([boneName, target]) => {
           if (!poseCurrentRef.current[boneName]) poseCurrentRef.current[boneName] = { x: 0, y: 0, z: 0 }
           const c = poseCurrentRef.current[boneName]
@@ -169,6 +170,11 @@ export function useAvatar(containerRef) {
             bone.rotation.x += c.x
             bone.rotation.y += c.y
             bone.rotation.z += c.z
+
+            // Active wave swing animation
+            if (boneName === 'rightUpperArm' && currentPose === 'wave') {
+              bone.rotation.z += Math.sin(t * 10) * 0.18
+            }
           }
         })
 
@@ -241,8 +247,17 @@ export function useAvatar(containerRef) {
     currentEmotionIntensityRef.current = THREE.MathUtils.lerp(
       currentEmotionIntensityRef.current, target.intensity, delta * 4
     )
-    ALL_EMOTION_PRESETS.forEach((p) => safeExpr(vrm, p, 0))
+    
+    // Clear all possible presets and fallbacks (both cases)
+    const list = [
+      'happy', 'sad', 'angry', 'surprised', 'relaxed',
+      'joy', 'sorrow', 'fun',
+      'Joy', 'Sorrow', 'Angry', 'Fun', 'Surprised', 'Blink'
+    ]
+    list.forEach((p) => safeExpr(vrm, p, 0))
+
     if (target.preset) safeExpr(vrm, target.preset, currentEmotionIntensityRef.current)
+    if (target.fallback) safeExpr(vrm, target.fallback, currentEmotionIntensityRef.current)
   }
 
   // ---- Lip sync ----
@@ -264,7 +279,13 @@ export function useAvatar(containerRef) {
 
   const applyEmotion = useCallback((name) => {
     const m = EMOTION_MAP[name]
-    if (m) targetEmotionRef.current = { preset: m.preset, intensity: m.intensity }
+    if (m) {
+      targetEmotionRef.current = {
+        preset: m.preset,
+        fallback: m.fallback,
+        intensity: m.intensity
+      }
+    }
   }, [])
 
   const applyPose = useCallback((pose) => {
