@@ -1,7 +1,5 @@
 /**
- * VoiceButton — Minimal
- *
- * Simple circle mic button, no glow rings.
+ * VoiceButton — Polished, colorful
  */
 
 import { useState, useCallback, useEffect, memo } from 'react'
@@ -45,11 +43,11 @@ function VoiceButton() {
   const isBusy = status === 'thinking' || status === 'talking'
 
   return (
-    <div className="fixed bottom-7 left-1/2 -translate-x-1/2 z-40 flex flex-col items-center gap-2" id="voice-section">
-      {/* Live transcript */}
+    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 flex flex-col items-center gap-3" id="voice-section">
+      {/* Transcript preview */}
       {transcript && isListening && (
-        <div className="bg-white/[0.03] border border-white/[0.05] rounded-lg px-3 py-1.5 max-w-[240px] anim-fade-in">
-          <p className="text-[12px] text-white/30 font-light truncate">"{transcript}"</p>
+        <div className="bg-elevated border border-[rgba(148,163,184,0.08)] rounded-xl px-4 py-2 max-w-[260px] anim-fade-in">
+          <p className="text-[12px] text-[#94a3b8] font-light truncate">"{transcript}"</p>
         </div>
       )}
 
@@ -61,28 +59,21 @@ function VoiceButton() {
         onTouchStart={isSupported ? handleDown : undefined}
         onTouchEnd={isSupported ? handleUp : undefined}
         disabled={isBusy}
-        className={`w-12 h-12 rounded-full flex items-center justify-center border transition-all duration-200 disabled:opacity-15
-          ${isListening
-            ? 'bg-white/[0.06] border-white/[0.15]'
-            : 'bg-white/[0.02] border-white/[0.06] hover:border-white/[0.12] hover:bg-white/[0.04]'
-          }`}
+        className={`voice-btn ${isListening ? 'voice-btn--active' : ''}`}
         id="voice-btn"
       >
         {isListening ? (
-          <div className="flex gap-[3px] items-center h-4">
-            {[0, 1, 2].map((i) => (
+          <div className="flex gap-[3px] items-center h-5">
+            {[0, 1, 2, 3].map((i) => (
               <div
                 key={i}
-                className="w-[2px] bg-white/30 rounded-full transition-all"
-                style={{
-                  height: `${8 + Math.sin(Date.now() / 200 + i * 1.2) * 6}px`,
-                  animation: `pulse-soft 0.6s ${i * 0.1}s ease-in-out infinite`,
-                }}
+                className="w-[3px] rounded-full bg-accent-indigo"
+                style={{ animation: `bar-wave 0.7s ${i * 0.12}s ease-in-out infinite` }}
               />
             ))}
           </div>
         ) : (
-          <svg className="w-4 h-4 text-white/25" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+          <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
             <rect x="9" y="2" width="6" height="12" rx="3" />
             <path d="M5 10a7 7 0 0014 0" />
             <line x1="12" y1="17" x2="12" y2="22" />
@@ -90,10 +81,10 @@ function VoiceButton() {
         )}
       </button>
 
-      {/* Hint */}
-      <p className="text-[10px] text-white/10 font-light tracking-widest uppercase">
-        {!isSupported ? 'Unavailable' : isListening ? 'Listening' : isBusy ? '' : 'Hold to talk'}
-      </p>
+      {/* Label */}
+      <span className="text-[10px] text-[#64748b] font-medium tracking-widest uppercase">
+        {!isSupported ? 'Unavailable' : isListening ? 'Listening...' : isBusy ? '' : 'Hold to talk'}
+      </span>
     </div>
   )
 }

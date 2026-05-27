@@ -1,7 +1,5 @@
 /**
- * ChatBox — Minimal
- *
- * Clean chat panel, no glow effects.
+ * ChatBox — Polished, colorful
  */
 
 import { useState, useRef, useEffect, memo } from 'react'
@@ -36,26 +34,31 @@ function ChatBox() {
 
   if (!chatVisible) return null
 
+  const isBusy = status === 'thinking' || status === 'talking'
+
   return (
-    <div className="fixed right-5 top-14 bottom-24 w-[360px] max-w-[calc(100vw-2.5rem)] flex flex-col z-30 anim-slide-in" id="chat-box">
-      <div className="flex flex-col h-full bg-white/[0.02] border border-white/[0.05] rounded-2xl overflow-hidden backdrop-blur-sm">
+    <div className="fixed right-5 top-16 bottom-24 w-[380px] max-w-[calc(100vw-2.5rem)] z-30 anim-slide-in" id="chat-box">
+      <div className="chat-panel flex flex-col h-full">
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-3 border-b border-white/[0.04]">
-          <span className="text-[13px] text-white/40 font-medium tracking-wide">Chat</span>
-          <button
-            onClick={() => useWaifuStore.getState().toggleChat()}
-            className="text-white/15 hover:text-white/35 transition-colors text-sm"
-            id="chat-close-btn"
-          >
+        <div className="chat-header">
+          <div className="chat-header-title">
+            <div className="chat-header-dot" />
+            <span className="text-[13px] font-semibold text-[#e2e8f0] tracking-wide">
+              Chat with Hana
+            </span>
+          </div>
+          <button onClick={() => useWaifuStore.getState().toggleChat()} className="close-btn" id="chat-close-btn">
             ✕
           </button>
         </div>
 
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
           {messages.length === 0 && (
-            <div className="text-center py-16 anim-fade-in">
-              <p className="text-white/15 text-sm font-light">Mulai ngobrol~</p>
+            <div className="text-center py-20 anim-fade-in">
+              <div className="text-3xl mb-3">✨</div>
+              <p className="text-[14px] text-[#94a3b8] font-medium">Halo! Mau ngobrol apa?</p>
+              <p className="text-[12px] text-[#64748b] mt-1">Ketik pesan atau tekan tombol mic</p>
             </div>
           )}
 
@@ -63,31 +66,38 @@ function ChatBox() {
             <div
               key={msg.timestamp + '-' + i}
               className={`anim-fade-in-up ${msg.role === 'user' ? 'flex justify-end' : 'flex justify-start'}`}
-              style={{ animationDelay: `${Math.min(i * 0.03, 0.3)}s` }}
+              style={{ animationDelay: `${Math.min(i * 0.04, 0.3)}s` }}
             >
               {msg.role === 'user' ? (
-                <div className="max-w-[80%] px-4 py-2.5 rounded-2xl rounded-br-sm bg-white/[0.06]">
-                  <p className="text-[13px] text-white/70 leading-relaxed">{msg.content}</p>
+                <div className="msg-user">
+                  <p className="text-[13px] leading-relaxed">{msg.content}</p>
                 </div>
               ) : (
-                <div className="max-w-[80%] px-4 py-2.5">
-                  <p className="text-[13px] text-white/55 leading-relaxed">{msg.content}</p>
+                <div className="msg-ai pl-4">
+                  <p className="text-[13px] leading-relaxed">{msg.content}</p>
+                  {msg.emotion && msg.emotion !== 'neutral' && (
+                    <span className="inline-block mt-1.5 text-[10px] text-accent-purple/50 font-medium uppercase tracking-wider">
+                      {msg.emotion}
+                    </span>
+                  )}
                 </div>
               )}
             </div>
           ))}
 
-          {/* Thinking dots */}
+          {/* Thinking indicator */}
           {status === 'thinking' && (
             <div className="flex justify-start anim-fade-in">
-              <div className="px-4 py-3 flex gap-1.5">
-                {[0, 1, 2].map((i) => (
-                  <div
-                    key={i}
-                    className="w-1.5 h-1.5 rounded-full bg-white/20"
-                    style={{ animation: `thinking-dot 1.2s ${i * 0.15}s ease-in-out infinite` }}
-                  />
-                ))}
+              <div className="msg-ai pl-4 py-3">
+                <div className="flex gap-1.5">
+                  {[0, 1, 2].map((i) => (
+                    <div
+                      key={i}
+                      className="w-2 h-2 rounded-full bg-accent-purple"
+                      style={{ animation: `thinking-dot 1.2s ${i * 0.15}s ease-in-out infinite` }}
+                    />
+                  ))}
+                </div>
               </div>
             </div>
           )}
@@ -96,25 +106,25 @@ function ChatBox() {
         </div>
 
         {/* Input */}
-        <div className="px-4 pb-4 pt-2">
-          <div className="flex items-center gap-2">
+        <div className="chat-input-area">
+          <div className="chat-input-wrap">
             <input
               type="text"
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="Ketik pesan..."
-              disabled={status === 'thinking' || status === 'talking'}
-              className="flex-1 bg-transparent border-b border-white/[0.06] focus:border-white/[0.15] px-1 py-2 text-[13px] text-white/70 placeholder-white/15 outline-none transition-colors duration-200 disabled:opacity-30 font-light"
+              disabled={isBusy}
+              className="chat-input"
               id="chat-input"
             />
             <button
               onClick={handleSend}
-              disabled={!inputText.trim() || status === 'thinking' || status === 'talking'}
-              className="text-white/20 hover:text-white/45 transition-colors disabled:opacity-15 disabled:cursor-not-allowed p-1"
+              disabled={!inputText.trim() || isBusy}
+              className="send-btn"
               id="send-btn"
             >
-              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M5 12h14M12 5l7 7-7 7" />
               </svg>
             </button>
