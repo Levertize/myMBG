@@ -1,8 +1,8 @@
 /**
- * useAvatar Hook
+ * useAvatar Hook — Fixed rotation
  *
- * Clean Three.js scene, VRM loading, natural rest pose (arms down),
- * cute idle animations (breathing, blink, sway, arm movement).
+ * Sets absolute bone rotations each frame (no accumulation).
+ * Rest pose once on load, idle animation as direct values.
  */
 
 import { useRef, useEffect, useCallback } from 'react'
@@ -12,33 +12,18 @@ import { VRMLoaderPlugin, VRMUtils } from '@pixiv/three-vrm'
 import useWaifuStore from '../store/waifuStore'
 import { EMOTION_MAP, ALL_EMOTION_PRESETS } from '../constants/emotions'
 
-// Natural rest pose — arms down, relaxed stance
-const REST_POSE = {
-  rightUpperArm:  { x: 0, y: 0, z: 1.15 },
-  leftUpperArm:   { x: 0, y: 0, z: -1.15 },
-  rightLowerArm:  { x: 0, y: 0, z: -0.08 },
-  leftLowerArm:   { x: 0, y: 0, z: 0.08 },
-  spine:          { x: 0, y: 0, z: 0 },
-  chest:          { x: 0, y: 0, z: 0 },
-  head:           { x: 0, y: 0, z: 0 },
-}
-
 export function useAvatar(containerRef) {
   const vrmRef = useRef(null)
   const rendererRef = useRef(null)
   const clockRef = useRef(new THREE.Clock())
   const frameIdRef = useRef(null)
-
-  // Animation phases
+  const timeRef = useRef(0)
   const blinkTimerRef = useRef(0)
   const blinkingRef = useRef(false)
-  const timeRef = useRef(0)
-
-  // Emotion & Pose
   const targetEmotionRef = useRef({ preset: null, intensity: 0 })
   const currentEmotionIntensityRef = useRef(0)
-  const poseOverridesRef = useRef({}) // additional bone rotations from poses (wave, nod, etc.)
-  const poseOverrideCurrentRef = useRef({})
+  const poseOverridesRef = useRef({})
+  const poseCurrentRef = useRef({})
 
   useEffect(() => {
     const container = containerRef.current
@@ -47,15 +32,12 @@ export function useAvatar(containerRef) {
     const width = container.clientWidth
     const height = container.clientHeight
 
-    // ---- Scene ----
     const scene = new THREE.Scene()
 
-    // ---- Camera ----
     const camera = new THREE.PerspectiveCamera(25, width / height, 0.1, 100)
     camera.position.set(0, 1.3, 3.5)
     camera.lookAt(0, 1.0, 0)
 
-    // ---- Renderer ----
     const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true })
     renderer.setSize(width, height)
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
@@ -65,22 +47,19 @@ export function useAvatar(containerRef) {
     container.appendChild(renderer.domElement)
     rendererRef.current = renderer
 
-    // ---- Lighting ----
+    // Lighting
     scene.add(new THREE.AmbientLight(0xffffff, 0.6))
+    const key = new THREE.DirectionalLight(0xffffff, 0.7)
+    key.position.set(1, 2, 3)
+    scene.add(key)
+    const fill = new THREE.DirectionalLight(0xe8ecf0, 0.25)
+    fill.position.set(-2, 1, 1)
+    scene.add(fill)
+    const back = new THREE.DirectionalLight(0xd0d8e0, 0.15)
+    back.position.set(0, 1, -2)
+    scene.add(back)
 
-    const keyLight = new THREE.DirectionalLight(0xffffff, 0.7)
-    keyLight.position.set(1, 2, 3)
-    scene.add(keyLight)
-
-    const fillLight = new THREE.DirectionalLight(0xe8ecf0, 0.25)
-    fillLight.position.set(-2, 1, 1)
-    scene.add(fillLight)
-
-    const backLight = new THREE.DirectionalLight(0xd0d8e0, 0.15)
-    backLight.position.set(0, 1, -2)
-    scene.add(backLight)
-
-    // ---- Load VRM ----
+    // Load VRM
     const vrmPath = import.meta.env.VITE_VRM_PATH || '/avatar/Elena.vrm'
     const loader = new GLTFLoader()
     loader.register((parser) => new VRMLoaderPlugin(parser))
@@ -89,60 +68,94 @@ export function useAvatar(containerRef) {
       vrmPath,
       (gltf) => {
         const vrm = gltf.userData.vrm
-        if (!vrm) { console.error('No VRM data in GLTF'); return }
+        if (!vrm) return
 
         VRMUtils.removeUnnecessaryJoints(vrm.scene)
-
-        // DO NOT rotate — VRM faces +Z which is towards our camera at +Z
         scene.add(vrm.scene)
         vrmRef.current = vrm
 
-        // Apply rest pose immediately (arms down from T-pose)
-        applyRestPose(vrm)
+        // Set rest pose once — arms down
+        setBone(vrm, 'rightUpperArm', 0, 0, 1.15)
+        setBone(vrm, 'leftUpperArm', 0, 0, -1.15)
+        setBone(vrm, 'rightLowerArm', 0, 0, -0.08)
+        setBone(vrm, 'leftLowerArm', 0, 0, 0.08)
 
         useWaifuStore.getState().setVrmLoaded(true)
-        console.log('✅ VRM loaded — rest pose applied')
+        console.log('✅ VRM loaded')
       },
-      (progress) => {
-        if (progress.total > 0) console.log(`VRM: ${(progress.loaded / progress.total * 100).toFixed(0)}%`)
-      },
-      (error) => console.error('VRM load error:', error)
+      undefined,
+      (err) => console.error('VRM error:', err)
     )
 
-    // ---- Animation Loop ----
+    // Animation loop
     function animate() {
       frameIdRef.current = requestAnimationFrame(animate)
       const delta = clockRef.current.getDelta()
       timeRef.current += delta
 
-      if (vrmRef.current) {
-        // 1. Start from rest pose
-        applyRestPose(vrmRef.current)
+      const vrm = vrmRef.current
+      if (vrm) {
+        const t = timeRef.current
 
-        // 2. Layer cute idle animation on top
-        applyIdleAnimation(vrmRef.current, timeRef.current)
+        // === IDLE: Set ABSOLUTE rotations (rest + tiny oscillation) ===
+        // Spine breathing
+        setBone(vrm, 'spine', Math.sin(t * 1.2) * 0.008, 0, 0)
 
-        // 3. Layer pose overrides (wave, nod, etc.)
-        applyPoseOverrides(vrmRef.current, delta)
+        // Chest subtle sway
+        setBone(vrm, 'chest', Math.sin(t * 0.9) * 0.004, 0, Math.sin(t * 0.6) * 0.006)
 
-        // 4. Blink
-        updateBlink(vrmRef.current, delta)
+        // Head gentle movement
+        setBone(vrm, 'head', Math.sin(t * 0.5) * 0.008, Math.sin(t * 0.35) * 0.025, Math.sin(t * 0.7) * 0.012)
 
-        // 5. Emotion expression
-        updateEmotionSmooth(vrmRef.current, delta)
+        // Arms — rest pose + gentle sway (absolute, NOT additive)
+        setBone(vrm, 'rightUpperArm',
+          Math.sin(t * 0.5) * 0.015,
+          0,
+          1.15 + Math.sin(t * 0.8) * 0.02
+        )
+        setBone(vrm, 'leftUpperArm',
+          Math.sin(t * 0.5 + 0.5) * 0.015,
+          0,
+          -1.15 + Math.sin(t * 0.8 + 0.5) * 0.02
+        )
 
-        // 6. Lip sync
-        updateLipSync(vrmRef.current)
+        // Forearms stay at rest
+        setBone(vrm, 'rightLowerArm', 0, 0, -0.08)
+        setBone(vrm, 'leftLowerArm', 0, 0, 0.08)
 
-        // 7. Update VRM (spring bones, etc.)
-        vrmRef.current.update(delta)
+        // === Pose overrides (smooth lerp) ===
+        Object.entries(poseOverridesRef.current).forEach(([boneName, target]) => {
+          if (!poseCurrentRef.current[boneName]) poseCurrentRef.current[boneName] = { x: 0, y: 0, z: 0 }
+          const c = poseCurrentRef.current[boneName]
+          c.x = THREE.MathUtils.lerp(c.x, target.x || 0, delta * 4)
+          c.y = THREE.MathUtils.lerp(c.y, target.y || 0, delta * 4)
+          c.z = THREE.MathUtils.lerp(c.z, target.z || 0, delta * 4)
+
+          const bone = vrm.humanoid?.getNormalizedBoneNode(boneName)
+          if (bone) {
+            bone.rotation.x += c.x
+            bone.rotation.y += c.y
+            bone.rotation.z += c.z
+          }
+        })
+
+        // === Blink ===
+        updateBlink(vrm, delta)
+
+        // === Emotion ===
+        updateEmotion(vrm, delta)
+
+        // === Lip sync ===
+        updateLipSync(vrm)
+
+        // === VRM update (spring bones etc) ===
+        vrm.update(delta)
       }
 
       renderer.render(scene, camera)
     }
     animate()
 
-    // ---- Resize ----
     function onResize() {
       const w = container.clientWidth
       const h = container.clientHeight
@@ -152,7 +165,6 @@ export function useAvatar(containerRef) {
     }
     window.addEventListener('resize', onResize)
 
-    // ---- Cleanup ----
     return () => {
       window.removeEventListener('resize', onResize)
       if (frameIdRef.current) cancelAnimationFrame(frameIdRef.current)
@@ -167,78 +179,17 @@ export function useAvatar(containerRef) {
     }
   }, [containerRef])
 
-  // ============================================================
-  //  REST POSE — bring arms down from T-pose
-  // ============================================================
-  function applyRestPose(vrm) {
-    const h = vrm.humanoid
-    if (!h) return
-
-    Object.entries(REST_POSE).forEach(([boneName, rot]) => {
-      const bone = h.getNormalizedBoneNode(boneName)
-      if (bone) {
-        bone.rotation.x = rot.x
-        bone.rotation.y = rot.y
-        bone.rotation.z = rot.z
-      }
-    })
+  // ---- Set bone rotation (absolute) ----
+  function setBone(vrm, name, x, y, z) {
+    const bone = vrm.humanoid?.getNormalizedBoneNode(name)
+    if (bone) { bone.rotation.x = x; bone.rotation.y = y; bone.rotation.z = z }
   }
 
-  // ============================================================
-  //  CUTE IDLE ANIMATION — layered on top of rest pose
-  // ============================================================
-  function applyIdleAnimation(vrm, time) {
-    const h = vrm.humanoid
-    if (!h) return
-
-    // Breathing — spine gently moves forward/back
-    const spine = h.getNormalizedBoneNode('spine')
-    if (spine) {
-      spine.rotation.x += Math.sin(time * 1.2) * 0.01
-    }
-
-    // Upper body sway — gentle side to side
-    const chest = h.getNormalizedBoneNode('chest')
-    if (chest) {
-      chest.rotation.z += Math.sin(time * 0.6) * 0.008
-      chest.rotation.x += Math.sin(time * 0.9) * 0.005
-    }
-
-    // Head — gentle look-around, slight tilt
-    const head = h.getNormalizedBoneNode('head')
-    if (head) {
-      head.rotation.y += Math.sin(time * 0.4) * 0.04   // look left-right slowly
-      head.rotation.z += Math.sin(time * 0.7) * 0.02    // slight tilt
-      head.rotation.x += Math.sin(time * 0.5) * 0.01    // tiny nod
-    }
-
-    // Arms — gentle sway (additive to rest pose)
-    const rArm = h.getNormalizedBoneNode('rightUpperArm')
-    const lArm = h.getNormalizedBoneNode('leftUpperArm')
-    if (rArm) {
-      rArm.rotation.z += Math.sin(time * 0.8) * 0.03
-      rArm.rotation.x += Math.sin(time * 0.5) * 0.02
-    }
-    if (lArm) {
-      lArm.rotation.z += Math.sin(time * 0.8 + 0.5) * 0.03
-      lArm.rotation.x += Math.sin(time * 0.5 + 0.5) * 0.02
-    }
-
-    // Hips — very subtle weight shift
-    const hips = h.getNormalizedBoneNode('hips')
-    if (hips) {
-      hips.rotation.z += Math.sin(time * 0.3) * 0.005
-    }
-  }
-
-  // ============================================================
-  //  BLINK — random natural blinking
-  // ============================================================
+  // ---- Blink ----
   function updateBlink(vrm, delta) {
     blinkTimerRef.current += delta
-
     if (!blinkingRef.current) {
-      if (blinkTimerRef.current > 2.5 + Math.random() * 3.5) {
+      if (blinkTimerRef.current > 3 + Math.random() * 3) {
         blinkingRef.current = true
         blinkTimerRef.current = 0
       }
@@ -246,18 +197,12 @@ export function useAvatar(containerRef) {
       const t = blinkTimerRef.current / 0.15
       if (t < 0.5) safeExpr(vrm, 'blink', t * 2)
       else if (t < 1.0) safeExpr(vrm, 'blink', (1.0 - t) * 2)
-      else {
-        safeExpr(vrm, 'blink', 0)
-        blinkingRef.current = false
-        blinkTimerRef.current = 0
-      }
+      else { safeExpr(vrm, 'blink', 0); blinkingRef.current = false; blinkTimerRef.current = 0 }
     }
   }
 
-  // ============================================================
-  //  EMOTION — smooth transitions
-  // ============================================================
-  function updateEmotionSmooth(vrm, delta) {
+  // ---- Emotion ----
+  function updateEmotion(vrm, delta) {
     const target = targetEmotionRef.current
     currentEmotionIntensityRef.current = THREE.MathUtils.lerp(
       currentEmotionIntensityRef.current, target.intensity, delta * 4
@@ -266,36 +211,7 @@ export function useAvatar(containerRef) {
     if (target.preset) safeExpr(vrm, target.preset, currentEmotionIntensityRef.current)
   }
 
-  // ============================================================
-  //  POSE OVERRIDES — wave, nod, bow, etc. (additive)
-  // ============================================================
-  function applyPoseOverrides(vrm, delta) {
-    const speed = 4.0
-    const targets = poseOverridesRef.current
-
-    Object.entries(targets).forEach(([boneName, targetRot]) => {
-      const bone = vrm.humanoid?.getNormalizedBoneNode(boneName)
-      if (!bone) return
-
-      if (!poseOverrideCurrentRef.current[boneName]) {
-        poseOverrideCurrentRef.current[boneName] = { x: 0, y: 0, z: 0 }
-      }
-      const cur = poseOverrideCurrentRef.current[boneName]
-
-      cur.x = THREE.MathUtils.lerp(cur.x, targetRot.x || 0, delta * speed)
-      cur.y = THREE.MathUtils.lerp(cur.y, targetRot.y || 0, delta * speed)
-      cur.z = THREE.MathUtils.lerp(cur.z, targetRot.z || 0, delta * speed)
-
-      // Add on top of rest + idle
-      bone.rotation.x += cur.x
-      bone.rotation.y += cur.y
-      bone.rotation.z += cur.z
-    })
-  }
-
-  // ============================================================
-  //  LIP SYNC
-  // ============================================================
+  // ---- Lip sync ----
   function updateLipSync(vrm) {
     const analyser = useWaifuStore.getState().analyserNode
     if (!analyser) return
@@ -304,18 +220,10 @@ export function useAvatar(containerRef) {
     let sum = 0
     for (let i = 0; i < data.length; i++) sum += data[i]
     const avg = sum / data.length / 255
-    if (avg > 0.02) {
-      safeExpr(vrm, 'aa', Math.min(avg * 2.5, 1))
-      safeExpr(vrm, 'oh', avg * 0.3)
-    } else {
-      safeExpr(vrm, 'aa', 0)
-      safeExpr(vrm, 'oh', 0)
-    }
+    safeExpr(vrm, 'aa', avg > 0.02 ? Math.min(avg * 2.5, 1) : 0)
+    safeExpr(vrm, 'oh', avg > 0.02 ? avg * 0.3 : 0)
   }
 
-  // ============================================================
-  //  HELPERS
-  // ============================================================
   function safeExpr(vrm, name, val) {
     try { vrm.expressionManager?.setValue(name, val) } catch {}
   }
@@ -326,47 +234,26 @@ export function useAvatar(containerRef) {
   }, [])
 
   const applyPose = useCallback((pose) => {
-    // Clear overrides — they smoothly lerp back to 0
     poseOverridesRef.current = {}
-    poseOverrideCurrentRef.current = {}
-
+    poseCurrentRef.current = {}
     switch (pose) {
       case 'wave':
-        // Right arm up and waving — override relative to rest pose
-        poseOverridesRef.current = {
-          rightUpperArm: { z: -1.8, x: 0.2 },  // lift arm up from rest
-          rightLowerArm: { z: -0.5, x: 0.2 },
-        }
+        poseOverridesRef.current = { rightUpperArm: { z: -1.8, x: 0.2 }, rightLowerArm: { z: -0.5 } }
         break
       case 'nod':
         poseOverridesRef.current = { head: { x: 0.2 } }
-        setTimeout(() => {
-          poseOverridesRef.current.head = { x: -0.1 }
-          setTimeout(() => { poseOverridesRef.current.head = { x: 0 } }, 400)
-        }, 400)
+        setTimeout(() => { poseOverridesRef.current.head = { x: -0.1 }; setTimeout(() => { poseOverridesRef.current.head = { x: 0 } }, 400) }, 400)
         break
       case 'shake':
         poseOverridesRef.current = { head: { y: 0.25 } }
-        setTimeout(() => {
-          poseOverridesRef.current.head = { y: -0.25 }
-          setTimeout(() => { poseOverridesRef.current.head = { y: 0 } }, 350)
-        }, 350)
-        break
-      case 'point':
-        poseOverridesRef.current = {
-          rightUpperArm: { z: -1.5, x: -0.3 },
-          rightLowerArm: { z: -0.3, x: -0.2 },
-        }
+        setTimeout(() => { poseOverridesRef.current.head = { y: -0.25 }; setTimeout(() => { poseOverridesRef.current.head = { y: 0 } }, 350) }, 350)
         break
       case 'bow':
         poseOverridesRef.current = { spine: { x: 0.3 }, head: { x: 0.15 } }
         setTimeout(() => { poseOverridesRef.current = { spine: { x: 0 }, head: { x: 0 } } }, 1500)
         break
       case 'peace':
-        poseOverridesRef.current = {
-          rightUpperArm: { z: -1.5 },
-          rightLowerArm: { z: -0.5, y: 0.3 },
-        }
+        poseOverridesRef.current = { rightUpperArm: { z: -1.5 }, rightLowerArm: { z: -0.5, y: 0.3 } }
         break
       default: break
     }
@@ -374,11 +261,11 @@ export function useAvatar(containerRef) {
 
   // Store subscription
   useEffect(() => {
-    let prevEmotion = useWaifuStore.getState().currentEmotion
-    let prevPose = useWaifuStore.getState().currentPose
-    const unsub = useWaifuStore.subscribe((state) => {
-      if (state.currentEmotion !== prevEmotion) { prevEmotion = state.currentEmotion; applyEmotion(state.currentEmotion) }
-      if (state.currentPose !== prevPose) { prevPose = state.currentPose; applyPose(state.currentPose) }
+    let prevE = useWaifuStore.getState().currentEmotion
+    let prevP = useWaifuStore.getState().currentPose
+    const unsub = useWaifuStore.subscribe((s) => {
+      if (s.currentEmotion !== prevE) { prevE = s.currentEmotion; applyEmotion(s.currentEmotion) }
+      if (s.currentPose !== prevP) { prevP = s.currentPose; applyPose(s.currentPose) }
     })
     return () => unsub()
   }, [applyEmotion, applyPose])
