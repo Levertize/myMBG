@@ -1,0 +1,460 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================
+   CSS Custom Properties
+   ============================ */
+:root {
+  --glow-cyan: #00f0ff;
+  --glow-cyan-rgb: 0, 240, 255;
+  --glow-magenta: #ff00e6;
+  --glow-magenta-rgb: 255, 0, 230;
+  --glow-purple: #a855f7;
+  --glow-purple-rgb: 168, 85, 247;
+  --bg-primary: #050510;
+  --bg-secondary: #0a0a1a;
+  --glass-bg: rgba(10, 10, 30, 0.65);
+  --glass-border: rgba(255, 255, 255, 0.06);
+  --glass-border-hover: rgba(0, 240, 255, 0.15);
+  --text-primary: rgba(255, 255, 255, 0.92);
+  --text-secondary: rgba(255, 255, 255, 0.55);
+  --text-muted: rgba(255, 255, 255, 0.3);
+}
+
+/* ============================
+   Base Styles
+   ============================ */
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  overflow: hidden;
+  width: 100vw;
+  height: 100vh;
+}
+
+#root {
+  width: 100%;
+  height: 100%;
+}
+
+/* ============================
+   Animated Background
+   ============================ */
+.app-background {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background:
+    radial-gradient(ellipse 80% 60% at 20% 80%, rgba(var(--glow-purple-rgb), 0.08) 0%, transparent 70%),
+    radial-gradient(ellipse 60% 50% at 80% 20%, rgba(var(--glow-cyan-rgb), 0.06) 0%, transparent 70%),
+    radial-gradient(ellipse 70% 70% at 50% 50%, rgba(var(--glow-magenta-rgb), 0.04) 0%, transparent 70%),
+    linear-gradient(180deg, var(--bg-primary) 0%, #0d0820 50%, var(--bg-secondary) 100%);
+}
+
+/* ============================
+   Floating Particles
+   ============================ */
+.particle {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+
+.particle--cyan {
+  background: radial-gradient(circle, rgba(var(--glow-cyan-rgb), 0.6) 0%, transparent 70%);
+  box-shadow: 0 0 6px rgba(var(--glow-cyan-rgb), 0.4);
+}
+
+.particle--magenta {
+  background: radial-gradient(circle, rgba(var(--glow-magenta-rgb), 0.5) 0%, transparent 70%);
+  box-shadow: 0 0 6px rgba(var(--glow-magenta-rgb), 0.3);
+}
+
+.particle--purple {
+  background: radial-gradient(circle, rgba(var(--glow-purple-rgb), 0.5) 0%, transparent 70%);
+  box-shadow: 0 0 6px rgba(var(--glow-purple-rgb), 0.3);
+}
+
+@keyframes particle-float {
+  0% {
+    transform: translateY(0) translateX(0) scale(1);
+    opacity: 0;
+  }
+  15% {
+    opacity: 0.6;
+  }
+  85% {
+    opacity: 0.6;
+  }
+  100% {
+    transform: translateY(-105vh) translateX(var(--drift-x, 30px)) scale(0.5);
+    opacity: 0;
+  }
+}
+
+/* ============================
+   Glassmorphism Utilities
+   ============================ */
+.glass {
+  background: var(--glass-bg);
+  backdrop-filter: blur(24px) saturate(1.2);
+  -webkit-backdrop-filter: blur(24px) saturate(1.2);
+  border: 1px solid var(--glass-border);
+}
+
+.glass-hover {
+  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.glass-hover:hover {
+  border-color: var(--glass-border-hover);
+  box-shadow:
+    0 0 20px rgba(var(--glow-cyan-rgb), 0.06),
+    inset 0 0 20px rgba(var(--glow-cyan-rgb), 0.02);
+}
+
+/* ============================
+   Glow Effects
+   ============================ */
+.glow-border-cyan {
+  border: 1px solid rgba(var(--glow-cyan-rgb), 0.25);
+  box-shadow:
+    0 0 8px rgba(var(--glow-cyan-rgb), 0.15),
+    0 0 24px rgba(var(--glow-cyan-rgb), 0.06),
+    inset 0 0 12px rgba(var(--glow-cyan-rgb), 0.03);
+}
+
+.glow-border-magenta {
+  border: 1px solid rgba(var(--glow-magenta-rgb), 0.25);
+  box-shadow:
+    0 0 8px rgba(var(--glow-magenta-rgb), 0.15),
+    0 0 24px rgba(var(--glow-magenta-rgb), 0.06),
+    inset 0 0 12px rgba(var(--glow-magenta-rgb), 0.03);
+}
+
+.glow-text-cyan {
+  color: var(--glow-cyan);
+  text-shadow: 0 0 10px rgba(var(--glow-cyan-rgb), 0.5), 0 0 30px rgba(var(--glow-cyan-rgb), 0.2);
+}
+
+.glow-text-magenta {
+  color: var(--glow-magenta);
+  text-shadow: 0 0 10px rgba(var(--glow-magenta-rgb), 0.5), 0 0 30px rgba(var(--glow-magenta-rgb), 0.2);
+}
+
+/* ============================
+   Glow Pulse Animations
+   ============================ */
+@keyframes neon-pulse {
+  0%, 100% {
+    box-shadow:
+      0 0 5px rgba(var(--glow-cyan-rgb), 0.3),
+      0 0 15px rgba(var(--glow-cyan-rgb), 0.15),
+      0 0 30px rgba(var(--glow-cyan-rgb), 0.05);
+  }
+  50% {
+    box-shadow:
+      0 0 10px rgba(var(--glow-cyan-rgb), 0.5),
+      0 0 25px rgba(var(--glow-cyan-rgb), 0.25),
+      0 0 50px rgba(var(--glow-cyan-rgb), 0.1),
+      0 0 80px rgba(var(--glow-cyan-rgb), 0.05);
+  }
+}
+
+@keyframes neon-pulse-magenta {
+  0%, 100% {
+    box-shadow:
+      0 0 5px rgba(var(--glow-magenta-rgb), 0.3),
+      0 0 15px rgba(var(--glow-magenta-rgb), 0.15),
+      0 0 30px rgba(var(--glow-magenta-rgb), 0.05);
+  }
+  50% {
+    box-shadow:
+      0 0 10px rgba(var(--glow-magenta-rgb), 0.5),
+      0 0 25px rgba(var(--glow-magenta-rgb), 0.25),
+      0 0 50px rgba(var(--glow-magenta-rgb), 0.1),
+      0 0 80px rgba(var(--glow-magenta-rgb), 0.05);
+  }
+}
+
+@keyframes listening-ring {
+  0% {
+    transform: scale(1);
+    opacity: 0.6;
+    box-shadow: 0 0 0 0 rgba(var(--glow-magenta-rgb), 0.4);
+  }
+  70% {
+    transform: scale(1.15);
+    opacity: 0;
+    box-shadow: 0 0 0 20px rgba(var(--glow-magenta-rgb), 0);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 0;
+    box-shadow: 0 0 0 0 rgba(var(--glow-magenta-rgb), 0);
+  }
+}
+
+@keyframes thinking-dots {
+  0%, 80%, 100% { opacity: 0.2; transform: scale(0.8); }
+  40% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes wave-bar {
+  0%, 100% { height: 4px; }
+  50% { height: 20px; }
+}
+
+/* ============================
+   Status Indicator Dots
+   ============================ */
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+}
+
+.status-dot--idle {
+  background: rgba(var(--glow-cyan-rgb), 0.5);
+  box-shadow: 0 0 6px rgba(var(--glow-cyan-rgb), 0.3);
+  animation: neon-pulse 3s ease-in-out infinite;
+}
+
+.status-dot--listening {
+  background: var(--glow-magenta);
+  box-shadow: 0 0 10px rgba(var(--glow-magenta-rgb), 0.5);
+  animation: neon-pulse-magenta 1s ease-in-out infinite;
+}
+
+.status-dot--thinking {
+  background: var(--glow-purple);
+  box-shadow: 0 0 10px rgba(var(--glow-purple-rgb), 0.5);
+  animation: neon-pulse 1.5s ease-in-out infinite;
+}
+
+.status-dot--talking {
+  background: var(--glow-cyan);
+  box-shadow: 0 0 10px rgba(var(--glow-cyan-rgb), 0.6);
+  animation: neon-pulse 0.8s ease-in-out infinite;
+}
+
+/* ============================
+   Scrollbar
+   ============================ */
+::-webkit-scrollbar {
+  width: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(var(--glow-cyan-rgb), 0.15);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(var(--glow-cyan-rgb), 0.3);
+}
+
+/* ============================
+   Chat Input Focus Glow
+   ============================ */
+.chat-input {
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.chat-input:focus {
+  border-color: rgba(var(--glow-cyan-rgb), 0.4);
+  box-shadow:
+    0 0 10px rgba(var(--glow-cyan-rgb), 0.15),
+    0 0 30px rgba(var(--glow-cyan-rgb), 0.06),
+    inset 0 0 10px rgba(var(--glow-cyan-rgb), 0.03);
+  outline: none;
+}
+
+/* ============================
+   Voice Button Glow
+   ============================ */
+.voice-btn {
+  position: relative;
+  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.voice-btn::before {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 0deg,
+    rgba(var(--glow-cyan-rgb), 0.4),
+    rgba(var(--glow-magenta-rgb), 0.4),
+    rgba(var(--glow-purple-rgb), 0.4),
+    rgba(var(--glow-cyan-rgb), 0.4)
+  );
+  opacity: 0;
+  transition: opacity 0.35s ease;
+  z-index: -1;
+  filter: blur(6px);
+}
+
+.voice-btn:hover::before {
+  opacity: 1;
+}
+
+.voice-btn--listening {
+  border-color: rgba(var(--glow-magenta-rgb), 0.6) !important;
+  box-shadow:
+    0 0 15px rgba(var(--glow-magenta-rgb), 0.4),
+    0 0 40px rgba(var(--glow-magenta-rgb), 0.15) !important;
+}
+
+.voice-btn--listening::before {
+  opacity: 1;
+  animation: spin 3s linear infinite;
+}
+
+.voice-btn--listening::after {
+  content: '';
+  position: absolute;
+  inset: -8px;
+  border-radius: 50%;
+  border: 2px solid rgba(var(--glow-magenta-rgb), 0.3);
+  animation: listening-ring 1.5s ease-out infinite;
+}
+
+/* ============================
+   Message Bubbles
+   ============================ */
+.msg-bubble {
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.msg-bubble--ai::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 2px;
+  background: linear-gradient(
+    180deg,
+    rgba(var(--glow-cyan-rgb), 0.6),
+    rgba(var(--glow-magenta-rgb), 0.3)
+  );
+  border-radius: 2px;
+  box-shadow: 0 0 8px rgba(var(--glow-cyan-rgb), 0.3);
+}
+
+/* ============================
+   Brand Title Glow
+   ============================ */
+.brand-title {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  background: linear-gradient(
+    135deg,
+    var(--glow-cyan) 0%,
+    var(--glow-magenta) 50%,
+    var(--glow-purple) 100%
+  );
+  background-size: 200% 200%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: gradient-shift 6s ease-in-out infinite;
+  filter: drop-shadow(0 0 12px rgba(var(--glow-cyan-rgb), 0.3));
+}
+
+@keyframes gradient-shift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+/* ============================
+   Loading Placeholder
+   ============================ */
+.vrm-placeholder {
+  position: relative;
+}
+
+.vrm-placeholder::after {
+  content: '';
+  position: absolute;
+  inset: 20%;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(var(--glow-cyan-rgb), 0.06) 0%,
+    rgba(var(--glow-magenta-rgb), 0.03) 40%,
+    transparent 70%
+  );
+  filter: blur(40px);
+  animation: pulse-glow 4s ease-in-out infinite;
+}
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 0.5; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.05); }
+}
+
+/* ============================
+   Send Button
+   ============================ */
+.send-btn {
+  background: linear-gradient(135deg, rgba(var(--glow-cyan-rgb), 0.2), rgba(var(--glow-magenta-rgb), 0.15));
+  border: 1px solid rgba(var(--glow-cyan-rgb), 0.25);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.send-btn:hover {
+  background: linear-gradient(135deg, rgba(var(--glow-cyan-rgb), 0.35), rgba(var(--glow-magenta-rgb), 0.25));
+  border-color: rgba(var(--glow-cyan-rgb), 0.5);
+  box-shadow:
+    0 0 12px rgba(var(--glow-cyan-rgb), 0.3),
+    0 0 30px rgba(var(--glow-cyan-rgb), 0.1);
+  transform: scale(1.05);
+}
+
+.send-btn:active {
+  transform: scale(0.95);
+}
+
+/* ============================
+   Toggle Button
+   ============================ */
+.toggle-btn {
+  background: rgba(10, 10, 30, 0.6);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  transition: all 0.3s ease;
+}
+
+.toggle-btn:hover {
+  border-color: rgba(var(--glow-cyan-rgb), 0.2);
+  box-shadow: 0 0 12px rgba(var(--glow-cyan-rgb), 0.1);
+}
