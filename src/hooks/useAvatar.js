@@ -27,6 +27,12 @@ export function useAvatar(containerRef) {
   const mouseRef = useRef({ x: 0, y: 0 })
   const targetHeadYawRef = useRef(0)
   const targetHeadPitchRef = useRef(0)
+  const spineRotRef = useRef({ x: 0, y: 0, z: 0 })
+  const chestRotRef = useRef({ x: 0, y: 0, z: 0 })
+  const neckRotRef = useRef({ x: 0, y: 0, z: 0 })
+  const headRotRef = useRef({ x: 0, y: 0, z: 0 })
+  const rightArmRotRef = useRef({ x: 0, y: 0, z: 0 })
+  const leftArmRotRef = useRef({ x: 0, y: 0, z: 0 })
 
   useEffect(() => {
     const container = containerRef.current
@@ -100,7 +106,8 @@ export function useAvatar(containerRef) {
     // Animation loop
     function animate() {
       frameIdRef.current = requestAnimationFrame(animate)
-      const delta = clockRef.current.getDelta()
+      // Cap delta to 0.1s to prevent physics/rotation explosion when resuming from tab suspension
+      const delta = Math.min(clockRef.current.getDelta(), 0.1)
       timeRef.current += delta
 
       const vrm = vrmRef.current
@@ -112,41 +119,68 @@ export function useAvatar(containerRef) {
         targetHeadYawRef.current = THREE.MathUtils.lerp(targetHeadYawRef.current, mouseRef.current.x * 0.32, delta * 3.5)
         targetHeadPitchRef.current = THREE.MathUtils.lerp(targetHeadPitchRef.current, mouseRef.current.y * 0.2, delta * 3.5)
 
-        // === IDLE: Set ABSOLUTE rotations (rest + breathing + mouse tracking) ===
-        // Hips/Spine lateral sway and rotation (breathing + weight shift)
-        const swayX = Math.sin(t * 1.0) * 0.02 // pitch sway
-        const swayY = Math.sin(t * 0.5) * 0.03 // yaw rotation sway
-        const swayZ = Math.cos(t * 0.5) * 0.025 // roll side-tilt sway
-        setBone(vrm, 'spine', swayX, swayY, swayZ)
+        // === LIVE2D-STYLE IDLE ANIMATIONS (Slow, Overlapping, Lerped) ===
+        const lerpSpeed = 2.5 // Low multiplier for ultra-smooth fluid lag
 
-        // Chest breathing sway
-        setBone(vrm, 'chest', Math.sin(t * 1.0) * 0.008, 0, Math.sin(t * 0.5) * 0.008)
+        // 1. Spine (Slow lateral weight shift)
+        const targetSpineX = Math.sin(t * 0.5) * 0.018 // Breathing pitch
+        const targetSpineY = Math.sin(t * 0.3) * 0.025 // Yaw sway
+        const targetSpineZ = Math.cos(t * 0.3) * 0.022 // Roll sway
+        const spine = spineRotRef.current
+        spine.x = THREE.MathUtils.lerp(spine.x, targetSpineX, delta * lerpSpeed)
+        spine.y = THREE.MathUtils.lerp(spine.y, targetSpineY, delta * lerpSpeed)
+        spine.z = THREE.MathUtils.lerp(spine.z, targetSpineZ, delta * lerpSpeed)
+        setBone(vrm, 'spine', spine.x, spine.y, spine.z)
 
-        // Neck (follows head with a slight delay)
-        setBone(vrm, 'neck', targetHeadPitchRef.current * 0.25, targetHeadYawRef.current * 0.25, 0)
+        // 2. Chest (Breathing sway, lagged phase)
+        const targetChestX = Math.sin(t * 0.5 - 0.4) * 0.008
+        const targetChestZ = Math.sin(t * 0.25) * 0.008
+        const chest = chestRotRef.current
+        chest.x = THREE.MathUtils.lerp(chest.x, targetChestX, delta * lerpSpeed)
+        chest.z = THREE.MathUtils.lerp(chest.z, targetChestZ, delta * lerpSpeed)
+        setBone(vrm, 'chest', chest.x, 0, chest.z)
 
-        // Head gentle movement + mouse tracking
-        setBone(vrm, 'head',
-          targetHeadPitchRef.current * 0.75 + Math.sin(t * 0.8) * 0.015,
-          targetHeadYawRef.current * 0.75 + Math.sin(t * 0.4) * 0.03,
-          Math.sin(t * 0.4) * 0.025 // head tilt roll
-        )
+        // 3. Neck (follows head with a slight delay)
+        const targetNeckX = targetHeadPitchRef.current * 0.25
+        const targetNeckY = targetHeadYawRef.current * 0.25
+        const neck = neckRotRef.current
+        neck.x = THREE.MathUtils.lerp(neck.x, targetNeckX, delta * lerpSpeed)
+        neck.y = THREE.MathUtils.lerp(neck.y, targetNeckY, delta * lerpSpeed)
+        setBone(vrm, 'neck', neck.x, neck.y, 0)
 
-        // Arms — sway in counter-balance to the spine sway
-        const armSwayR_X = Math.sin(t * 0.5) * 0.04
-        const armSwayR_Z = 1.22 + Math.sin(t * 1.0) * 0.03
-        setBone(vrm, 'rightUpperArm', armSwayR_X, 0, armSwayR_Z)
+        // 4. Head (Tilt and sway, lagged phase + mouse tracking)
+        const targetHeadX = targetHeadPitchRef.current * 0.75 + Math.sin(t * 0.5 - 0.8) * 0.012
+        const targetHeadY = targetHeadYawRef.current * 0.75 + Math.sin(t * 0.25) * 0.025
+        const targetHeadZ = Math.sin(t * 0.25 - 0.5) * 0.022 // Head tilt roll
+        const head = headRotRef.current
+        head.x = THREE.MathUtils.lerp(head.x, targetHeadX, delta * lerpSpeed)
+        head.y = THREE.MathUtils.lerp(head.y, targetHeadY, delta * lerpSpeed)
+        head.z = THREE.MathUtils.lerp(head.z, targetHeadZ, delta * lerpSpeed)
+        setBone(vrm, 'head', head.x, head.y, head.z)
 
-        const armSwayL_X = -Math.sin(t * 0.5) * 0.04
-        const armSwayL_Z = -1.22 + Math.sin(t * 1.0 + 0.5) * 0.03
-        setBone(vrm, 'leftUpperArm', armSwayL_X, 0, armSwayL_Z)
+        // 5. Upper Arms (Counter-balance sway, relaxed forward hang)
+        const targetArmRX = -0.05 + Math.sin(t * 0.35) * 0.02
+        const targetArmRZ = 1.22 + Math.sin(t * 0.5) * 0.015
+        const armR = rightArmRotRef.current
+        armR.x = THREE.MathUtils.lerp(armR.x, targetArmRX, delta * lerpSpeed)
+        armR.z = THREE.MathUtils.lerp(armR.z, targetArmRZ, delta * lerpSpeed)
+        setBone(vrm, 'rightUpperArm', armR.x, -0.05, armR.z)
 
-        // Forearms stay at rest + slight breathing oscillation
-        setBone(vrm, 'rightLowerArm', 0, 0, -0.08 + Math.sin(t * 0.8) * 0.015)
-        setBone(vrm, 'leftLowerArm', 0, 0, 0.08 + Math.sin(t * 0.8 + 0.5) * 0.015)
+        const targetArmLX = -0.05 - Math.sin(t * 0.35) * 0.02
+        const targetArmLZ = -1.22 + Math.sin(t * 0.5 + 0.3) * 0.015
+        const armL = leftArmRotRef.current
+        armL.x = THREE.MathUtils.lerp(armL.x, targetArmLX, delta * lerpSpeed)
+        armL.z = THREE.MathUtils.lerp(armL.z, targetArmLZ, delta * lerpSpeed)
+        setBone(vrm, 'leftUpperArm', armL.x, 0.05, armL.z)
 
-        // Fingers - soft natural curl breathing animation
-        const curl = 0.2 + Math.sin(t * 1.0) * 0.08
+        // 6. Forearms (Relaxed forward elbow bend on X-axis)
+        const targetLowerArmRX = 0.35 + Math.sin(t * 0.5 - 0.2) * 0.02
+        const targetLowerArmLX = 0.35 + Math.sin(t * 0.5 - 0.2 + 0.3) * 0.02
+        setBone(vrm, 'rightLowerArm', targetLowerArmRX, 0.1, 0)
+        setBone(vrm, 'leftLowerArm', targetLowerArmLX, -0.1, 0)
+
+        // 7. Fingers (Slow breath curl)
+        const curl = 0.22 + Math.sin(t * 0.5) * 0.07
         setBone(vrm, 'rightIndexProximal', curl, 0, 0)
         setBone(vrm, 'rightMiddleProximal', curl * 1.1, 0, 0)
         setBone(vrm, 'rightRingProximal', curl * 1.1, 0, 0)
